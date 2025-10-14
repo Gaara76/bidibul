@@ -1,0 +1,16 @@
+# Espressif / IDF build files
+build/
+sdkconfig.old
+sdkconfig
+*.pyc
+__pycache__/
+.vscode/
+.idea/
+*.elf
+*.bin
+*.map
+*.log
+*.old
+
+# LVGL generated
+components/lvgl__lvgl/tests/

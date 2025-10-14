@@ -1,0 +1,199 @@
+
+#include "LVGL_UI/ui.h"
+#include "esp_log.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <math.h>
+#include "../components/lvgl__lvgl/lvgl.h"
+
+#define NB_POINTS_BARO 36   // 9h avec 1 point / 15 min
+#define SMOOTH_WINDOW 3     // taille de la fenêtre de lissage (moyenne mobile)
+
+static const char *TAG_BARO = "BARO";
+
+static lv_coord_t baro_points[NB_POINTS_BARO];
+static int baro_index = 0;
+extern lv_chart_series_t *ui_graphe_series_1;
+lv_chart_series_t *ui_graphe_series_1 = NULL;
+
+extern float pression_actuelle;
+bool baro_initialized = false;
+
+// --- Callback pour afficher les labels Y avec 1 décimale ---
+static void y_axis_draw_event_cb(lv_event_t * e)
+{
+    lv_obj_draw_part_dsc_t * dsc = lv_event_get_param(e);
+
+    if (dsc->part == LV_PART_TICKS && dsc->text && dsc->id == LV_CHART_AXIS_PRIMARY_Y) {
+        int raw = atoi(dsc->text);
+        char buf[16];
+        snprintf(buf, sizeof(buf), "%.1f", raw / 10.0f);
+        lv_snprintf(dsc->text, 16, "%s", buf);
+    }
+}
+
+// --- Initialisation de l'écran baro ---
+void ui_modebaro_screen_init(void)
+{
+    ui_modebaro = lv_obj_create(NULL);
+    lv_obj_clear_flag(ui_modebaro, LV_OBJ_FLAG_PRESS_LOCK | LV_OBJ_FLAG_SCROLLABLE |
+                      LV_OBJ_FLAG_SCROLL_ELASTIC | LV_OBJ_FLAG_SCROLL_MOMENTUM);
+    lv_obj_set_scrollbar_mode(ui_modebaro, LV_SCROLLBAR_MODE_ON);
+
+    ui_object_set_themeable_style_property(ui_modebaro, LV_PART_MAIN | LV_STATE_DEFAULT, LV_STYLE_BG_COLOR, _ui_theme_color_fond);
+    ui_object_set_themeable_style_property(ui_modebaro, LV_PART_MAIN | LV_STATE_DEFAULT, LV_STYLE_BG_OPA, _ui_theme_alpha_fond);
+
+    ui_graphe = lv_chart_create(ui_modebaro);
+    lv_obj_add_event_cb(ui_graphe, y_axis_draw_event_cb, LV_EVENT_DRAW_PART_BEGIN, NULL);
+
+    lv_obj_set_width(ui_graphe, 341);
+    lv_obj_set_height(ui_graphe, 236);
+    lv_obj_set_x(ui_graphe, 18);
+    lv_obj_set_y(ui_graphe, -5);
+    lv_obj_set_align(ui_graphe, LV_ALIGN_CENTER);
+    lv_obj_clear_flag(ui_graphe, LV_OBJ_FLAG_CLICKABLE | LV_OBJ_FLAG_PRESS_LOCK | LV_OBJ_FLAG_CLICK_FOCUSABLE | LV_OBJ_FLAG_SNAPPABLE);
+
+    lv_chart_set_type(ui_graphe, LV_CHART_TYPE_LINE);
+    lv_chart_set_point_count(ui_graphe, NB_POINTS_BARO);
+
+    lv_chart_set_range(ui_graphe, LV_CHART_AXIS_PRIMARY_Y, 9500, 10600);
+    lv_chart_set_range(ui_graphe, LV_CHART_AXIS_SECONDARY_Y, 0, 6);
+
+    lv_chart_set_div_line_count(ui_graphe, 8, 10);
+    lv_chart_set_axis_tick(ui_graphe, LV_CHART_AXIS_PRIMARY_X, 5, 2, 19, 1, false, 50);
+    lv_chart_set_axis_tick(ui_graphe, LV_CHART_AXIS_PRIMARY_Y, 5, 2, 4, 1, true, 50);
+
+    ui_graphe_series_1 = lv_chart_add_series(ui_graphe, lv_color_hex(0xd11111), LV_CHART_AXIS_PRIMARY_Y);
+    lv_chart_set_ext_y_array(ui_graphe, ui_graphe_series_1, baro_points);
+
+    vTaskDelay(pdMS_TO_TICKS(500));
+
+    // initialisation: remplir le tableau avec la première valeur connue
+    int raw_init = (int)roundf(pression_actuelle * 10.0f);
+    for (int i = 0; i < NB_POINTS_BARO; i++) {
+        baro_points[i] = (lv_coord_t) raw_init;
+    }
+    baro_index = NB_POINTS_BARO - 1;
+    lv_chart_refresh(ui_graphe);
+
+    // Styles
+    //ui_object_set_themeable_style_property(ui_graphe, LV_PART_MAIN | LV_STATE_DEFAULT, LV_STYLE_BG_COLOR, _ui_theme_color_fondspin);
+    //ui_object_set_themeable_style_property(ui_graphe, LV_PART_MAIN | LV_STATE_DEFAULT, LV_STYLE_BG_OPA, _ui_theme_alpha_fondspin);
+    ui_object_set_themeable_style_property(ui_graphe, LV_PART_MAIN | LV_STATE_DEFAULT, LV_STYLE_BORDER_COLOR, _ui_theme_color_fleche);
+    ui_object_set_themeable_style_property(ui_graphe, LV_PART_MAIN | LV_STATE_DEFAULT, LV_STYLE_BORDER_OPA, _ui_theme_alpha_fleche);
+    lv_obj_set_style_border_width(ui_graphe, 2, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_size(ui_graphe, 5, LV_PART_INDICATOR | LV_STATE_DEFAULT);
+    //lv_obj_set_style_line_color(ui_graphe, lv_color_hex(0xBFBFBF), LV_PART_TICKS | LV_STATE_DEFAULT);
+    //lv_obj_set_style_line_opa(ui_graphe, 255, LV_PART_TICKS | LV_STATE_DEFAULT);
+    ui_object_set_themeable_style_property(ui_graphe, LV_PART_TICKS | LV_STATE_DEFAULT, LV_STYLE_TEXT_COLOR,
+                                           _ui_theme_color_texte);
+    ui_object_set_themeable_style_property(ui_graphe, LV_PART_TICKS | LV_STATE_DEFAULT, LV_STYLE_TEXT_OPA,
+                                           _ui_theme_alpha_texte);
+    lv_obj_set_style_line_color(ui_graphe, lv_color_hex(0xFFFFFF), LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_line_opa(ui_graphe, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
+
+    // Titre
+    ui_Label30 = lv_label_create(ui_modebaro);
+    lv_obj_set_y(ui_Label30, -173);
+    lv_obj_set_align(ui_Label30, LV_ALIGN_CENTER);
+    lv_label_set_text(ui_Label30, "Barometre");
+    lv_obj_set_style_text_font(ui_Label30, &lv_font_montserrat_26, LV_PART_MAIN | LV_STATE_DEFAULT);
+    ui_object_set_themeable_style_property(ui_Label30, LV_PART_MAIN | LV_STATE_DEFAULT, LV_STYLE_TEXT_COLOR,
+                                           _ui_theme_color_texte);
+    ui_object_set_themeable_style_property(ui_Label30, LV_PART_MAIN | LV_STATE_DEFAULT, LV_STYLE_TEXT_OPA,
+                                           _ui_theme_alpha_texte);
+
+    // Echelle X
+
+    ui_Label31 = lv_label_create(ui_modebaro);
+    lv_obj_set_width(ui_Label31, LV_SIZE_CONTENT);   /// 1
+    lv_obj_set_height(ui_Label31, LV_SIZE_CONTENT);    /// 1
+    lv_obj_set_x(ui_Label31, -139);
+    lv_obj_set_y(ui_Label31, 131);
+    lv_obj_set_align(ui_Label31, LV_ALIGN_CENTER);
+    lv_label_set_text(ui_Label31, "24h");
+    ui_object_set_themeable_style_property(ui_Label31, LV_PART_MAIN | LV_STATE_DEFAULT, LV_STYLE_TEXT_COLOR,
+                                           _ui_theme_color_texte);
+    ui_object_set_themeable_style_property(ui_Label31, LV_PART_MAIN | LV_STATE_DEFAULT, LV_STYLE_TEXT_OPA,
+                                           _ui_theme_alpha_texte);
+
+    ui_Label32 = lv_label_create(ui_modebaro);
+    lv_obj_set_width(ui_Label32, LV_SIZE_CONTENT);   /// 1
+    lv_obj_set_height(ui_Label32, LV_SIZE_CONTENT);    /// 1
+    lv_obj_set_x(ui_Label32, 18);
+    lv_obj_set_y(ui_Label32, 131);
+    lv_obj_set_align(ui_Label32, LV_ALIGN_CENTER);
+    lv_label_set_text(ui_Label32, "12h");
+    ui_object_set_themeable_style_property(ui_Label32, LV_PART_MAIN | LV_STATE_DEFAULT, LV_STYLE_TEXT_COLOR,
+                                           _ui_theme_color_texte);
+    ui_object_set_themeable_style_property(ui_Label32, LV_PART_MAIN | LV_STATE_DEFAULT, LV_STYLE_TEXT_OPA,
+                                           _ui_theme_alpha_texte);
+
+    ui_Label33 = lv_label_create(ui_modebaro);
+    lv_obj_set_width(ui_Label33, LV_SIZE_CONTENT);   /// 1
+    lv_obj_set_height(ui_Label33, LV_SIZE_CONTENT);    /// 1
+    lv_obj_set_x(ui_Label33, 174);
+    lv_obj_set_y(ui_Label33, 131);
+    lv_obj_set_align(ui_Label33, LV_ALIGN_CENTER);
+    lv_label_set_text(ui_Label33, "0h");
+    ui_object_set_themeable_style_property(ui_Label33, LV_PART_MAIN | LV_STATE_DEFAULT, LV_STYLE_TEXT_COLOR,
+                                           _ui_theme_color_texte);
+    ui_object_set_themeable_style_property(ui_Label33, LV_PART_MAIN | LV_STATE_DEFAULT, LV_STYLE_TEXT_OPA,
+                                           _ui_theme_alpha_texte);
+
+    // Pression numérique
+    ui_Label22 = lv_label_create(ui_modebaro);
+    lv_obj_set_y(ui_Label22, 187);
+    lv_obj_set_align(ui_Label22, LV_ALIGN_CENTER);
+    lv_label_set_text(ui_Label22, "N/A");
+    ui_object_set_themeable_style_property(ui_Label22, LV_PART_MAIN | LV_STATE_DEFAULT, LV_STYLE_TEXT_COLOR,
+                                           _ui_theme_color_texte);
+    ui_object_set_themeable_style_property(ui_Label22, LV_PART_MAIN | LV_STATE_DEFAULT, LV_STYLE_TEXT_OPA,
+                                           _ui_theme_alpha_texte);
+    lv_obj_set_style_text_font(ui_Label22, &lv_font_montserrat_24, LV_PART_MAIN | LV_STATE_DEFAULT);
+
+    lv_obj_add_event_cb(ui_modebaro, ui_event_modebaro, LV_EVENT_ALL, NULL);
+}
+
+// --- Fonction d’ajout avec lissage ---
+void baro_add_value(float pression) {
+    // Convertit en "raw" = dixième de hPa entier (ex: 1019.8 -> 10198)
+    int raw = (int)roundf(pression * 10.0f);
+
+    // Décaler le tableau vers la gauche (perd la plus ancienne valeur)
+    memmove(&baro_points[0],
+            &baro_points[1],
+            (NB_POINTS_BARO - 1) * sizeof(baro_points[0]));
+
+    // Place la nouvelle valeur à la fin (chronologique)
+    baro_points[NB_POINTS_BARO - 1] = (lv_coord_t) raw;
+
+    // (Optionnel) mettre à jour un index logique si tu en as besoin ailleurs
+    baro_index = (baro_index + 1) % NB_POINTS_BARO;
+
+    ESP_LOGI(TAG_BARO, "⏱️ Ajout pression: %.2f hPa -> raw=%d", pression, raw);
+
+    // Mise à jour de l'échelle et rafraîchissement du graphe
+    update_baro_chart_scale(ui_graphe);
+    lv_chart_refresh(ui_graphe);
+}
+
+// --- Mise à jour de l’échelle Y ---
+void update_baro_chart_scale(lv_obj_t *chart)
+{
+    int min_raw = 99999;
+    int max_raw = 0;
+    for (int i = 0; i < NB_POINTS_BARO; i++) {
+        int v = baro_points[i];
+        if (v > 0) {
+            if (v < min_raw) min_raw = v;
+            if (v > max_raw) max_raw = v;
+        }
+    }
+    if (min_raw == 99999 || max_raw == 0) return;
+    int min_y = min_raw - 10;  // marge -1.0 hPa
+    int max_y = max_raw + 10;  // marge +1.0 hPa
+    lv_chart_set_range(chart, LV_CHART_AXIS_PRIMARY_Y, min_y, max_y);
+    //ESP_LOGI(TAG_BARO, "📉 Échelle Y ajustée : %.1f – %.1f hPa", min_y / 10.0f, max_y / 10.0f);
+}
