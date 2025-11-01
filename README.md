@@ -66,7 +66,7 @@ L’interface utilise la bibliothèque **LVGL** pour un rendu fluide et moderne 
 
 1. Installer l’ESP-IDF (version 5.x minimum)  
 2. Cloner le dépôt dans `~/esp/projects/anemometre/`  
-3. Modifier le fichier ui_events.c avec SSID Wifi et Mot de passe
+3. Modifier le fichier `/main/LVGL_UI/ui_events.c` avec SSID_Wifi et pasword_wifi
 4. Compiler et flasher :  
    ```bash
    idf.py build
