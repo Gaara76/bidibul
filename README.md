@@ -1,6 +1,6 @@
-# 🌬️ Anémomètre connecté ESP32-S3
+# 🌬️ Anémomètre ESP32-S3
 
-Ce projet est avant tout un **anémomètre connecté** basé sur un **ESP32-S3**, conçu pour les applications marines.  
+Ce projet est avant tout un **anémomètre** basé sur un **ESP32-S3**, conçu pour les applications marines.  
 Il mesure la **vitesse du vent** via un **anémomètre ultrasonique**, tout en pouvant afficher en option des données météo (pression, température).  
 L’interface est réalisée avec **LVGL** sur un écran tactile couleur Waveshare.
 
@@ -66,7 +66,8 @@ L’interface utilise la bibliothèque **LVGL** pour un rendu fluide et moderne 
 
 1. Installer l’ESP-IDF (version 5.x minimum)  
 2. Cloner le dépôt dans `~/esp/projects/anemometre/`  
-3. Compiler et flasher :  
+3. Modifier le fichier ui_events.c avec SSID Wifi et Mot de passe
+4. Compiler et flasher :  
    ```bash
    idf.py build
    idf.py flash
@@ -83,4 +84,4 @@ L’interface utilise la bibliothèque **LVGL** pour un rendu fluide et moderne 
 
 ---
 
-© 2025 – Projet personnel ESP32‑S3 Anémomètre connecté.
+© 2025 – Projet personnel ESP32‑S3 Bidibul.

@@ -22,8 +22,8 @@
 #include <stdio.h>
 #include "esp_log.h"
 
-const char *ssid = "your_ssid";
-const char *pass = "pass";
+const char *ssid = "ssid_wifi";
+const char *pass = "password_wifi";
 
 int retry_num=0;
 

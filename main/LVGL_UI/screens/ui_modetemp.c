@@ -26,14 +26,14 @@ static const char *TAG;
 
 SemaphoreHandle_t http_mutex = NULL;
 static const char *TAG = "HTTP_CLIENT";
-static char temperature_str[64] = "N/A";
-static char pression_str[64] = "N/A";
+static char temperature_str[128] = "N/A";
+static char pression_str[128] = "N/A";
 void http_simple_get(const char *host, const char *path, uint16_t port);
 float temperature_actuelle = 0.0f;
 float temperature_max = -100.0f;
 float temperature_min = 100.0f;
-static char temperature_max_str[64] = "N/A";
-static char temperature_min_str[64] = "N/A";
+static char temperature_max_str[128] = "N/A";
+static char temperature_min_str[128] = "N/A";
 
 //////////// gite /////////////
 #include <math.h>
@@ -43,11 +43,7 @@ const float alpha = 0.1f; // 0 < alpha < 1 (plus petit = plus amorti)
 //////////////////////////////
 
 /////////// pression /////////////
-//static float pression_actuelle = 0.0f;
 float pression_actuelle = 0.0f;
-//extern float pression_actuelle;
-//static float pression_reference = 0.0f;
-//static char pression_tendance[64] = "↔";
 static int compteur_pression = 0;
 //////////////////////////////////
 
@@ -163,20 +159,6 @@ void ui_modetemp_screen_init(void)
                                            _ui_theme_alpha_texte);
     lv_obj_set_style_text_font(ui_Label26, &lv_font_montserrat_16, LV_PART_MAIN | LV_STATE_DEFAULT);
 
-    /////////////// FLECHES ///////////////////
-    //ui_Label24 = lv_label_create(ui_modetemp);
-    //lv_obj_set_width(ui_Label24, LV_SIZE_CONTENT);  
-    //lv_obj_set_height(ui_Label24, LV_SIZE_CONTENT);  
-    //lv_obj_set_x(ui_Label24, 105);
-    //lv_obj_set_y(ui_Label24, -152);
-    //lv_obj_set_align(ui_Label24, LV_ALIGN_CENTER);
-    //lv_label_set_text_fmt(ui_Label24, " ");  /// OU ↗ ↘
-    //ui_object_set_themeable_style_property(ui_Label24, LV_PART_MAIN | LV_STATE_DEFAULT, LV_STYLE_TEXT_COLOR,
-    //                                           _ui_theme_color_texte);
-    //ui_object_set_themeable_style_property(ui_Label24, LV_PART_MAIN | LV_STATE_DEFAULT, LV_STYLE_TEXT_OPA,
-    //                                           _ui_theme_alpha_texte);
-    //lv_obj_set_style_text_font(ui_Label24, &fleches, LV_PART_MAIN | LV_STATE_DEFAULT);
-
     //////////////// ECHELLE 0 /////////////////
     ui_Label0 = lv_label_create(ui_modetemp);
     lv_obj_set_width(ui_Label0, 7);
@@ -249,7 +231,6 @@ void ui_modetemp_screen_init(void)
     ui_object_set_themeable_style_property(ui_Labelinclino, LV_PART_MAIN | LV_STATE_DEFAULT, LV_STYLE_TEXT_OPA,
                                            _ui_theme_alpha_texte);
 
-
     ui_Label7 = lv_label_create(ui_modetemp);
     lv_obj_set_width(ui_Label7, LV_SIZE_CONTENT);   /// 1
     lv_obj_set_height(ui_Label7, LV_SIZE_CONTENT);    /// 1
@@ -299,8 +280,8 @@ void ui_modetemp_screen_init(void)
                                            _ui_theme_alpha_texte);
 
     ui_Label11 = lv_label_create(ui_modetemp);
-    lv_obj_set_width(ui_Label11, LV_SIZE_CONTENT);   /// 1
-    lv_obj_set_height(ui_Label11, LV_SIZE_CONTENT);    /// 1
+    lv_obj_set_width(ui_Label11, LV_SIZE_CONTENT);
+    lv_obj_set_height(ui_Label11, LV_SIZE_CONTENT);
     lv_obj_set_x(ui_Label11, 109);
     lv_obj_set_y(ui_Label11, 133);
     lv_obj_set_align(ui_Label11, LV_ALIGN_CENTER);
@@ -311,8 +292,8 @@ void ui_modetemp_screen_init(void)
                                            _ui_theme_alpha_texte);
 
     ui_Label13 = lv_label_create(ui_modetemp);
-    lv_obj_set_width(ui_Label13, LV_SIZE_CONTENT);   /// 1
-    lv_obj_set_height(ui_Label13, LV_SIZE_CONTENT);    /// 1
+    lv_obj_set_width(ui_Label13, LV_SIZE_CONTENT);
+    lv_obj_set_height(ui_Label13, LV_SIZE_CONTENT);
     lv_obj_set_x(ui_Label13, 39);
     lv_obj_set_y(ui_Label13, 167);
     lv_obj_set_align(ui_Label13, LV_ALIGN_CENTER);
@@ -323,8 +304,8 @@ void ui_modetemp_screen_init(void)
                                            _ui_theme_alpha_texte);
 
     ui_Label21 = lv_label_create(ui_modetemp);
-    lv_obj_set_width(ui_Label21, LV_SIZE_CONTENT);   /// 1
-    lv_obj_set_height(ui_Label21, LV_SIZE_CONTENT);    /// 1
+    lv_obj_set_width(ui_Label21, LV_SIZE_CONTENT);
+    lv_obj_set_height(ui_Label21, LV_SIZE_CONTENT);
     lv_obj_set_x(ui_Label21, -39);
     lv_obj_set_y(ui_Label21, 167);
     lv_obj_set_align(ui_Label21, LV_ALIGN_CENTER);
@@ -489,9 +470,8 @@ void parse_json_data(const char *json) {
         lv_obj_invalidate(ui_Label22);
         return;
     }
-
-    char extracted_temperature[64] = "N/A";
-    char extracted_pression[64] = "N/A";
+    char extracted_temperature[128] = "N/A";
+    char extracted_pression[128] = "N/A";
 
     ///////////// CAPTEUR EXTERNE ///////////////////
     cJSON *common_list = cJSON_GetObjectItem(root, "common_list");
@@ -528,7 +508,7 @@ void parse_json_data(const char *json) {
     
                 if (cJSON_IsString(battery) && cJSON_IsString(voltage)) {
                     //ESP_LOGI("PILE", "🔋 Batterie : %s / Tension : %s V", battery->valuestring, voltage->valuestring);
-                    char battery_str[64];  // Buffer pour la chaîne à afficher
+                    char battery_str[128];  // Buffer pour la chaîne à afficher
                     strcpy(battery_str, battery->valuestring);
                     snprintf(battery_str, sizeof(battery_str), "🔋 Batterie : %s/5", battery->valuestring);
                     lv_label_set_text_fmt(ui_Label16, battery_str);
