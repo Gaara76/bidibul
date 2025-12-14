@@ -329,15 +329,15 @@ void ui_modetemp_screen_init(void)
 
     DIR* dir = opendir("/sdcard");
         if (dir != NULL) {
-    ESP_LOGI(TAG, "✅ Carte SD accessible !");
+    //ESP_LOGI(TAG, "✅ Carte SD accessible !");
     closedir(dir);
         } else {
     ESP_LOGE(TAG, "❌ Erreur ouverture carte SD !");
         }
 
     ESP_ERROR_CHECK(ret);
-    ESP_LOGI(TAG, "Mémoire libre : %lu bytes", esp_get_free_heap_size());
-    ESP_LOGI(TAG, "Mémoire max allocable : %d bytes", heap_caps_get_largest_free_block(MALLOC_CAP_8BIT));
+    //ESP_LOGI(TAG, "Mémoire libre : %lu bytes", esp_get_free_heap_size());
+    //ESP_LOGI(TAG, "Mémoire max allocable : %d bytes", heap_caps_get_largest_free_block(MALLOC_CAP_8BIT));
     const char *host = "192.168.2.237";
     const char *path = "/get_livedata_info?";
     uint16_t port = 80;
@@ -361,7 +361,7 @@ void http_simple_get(const char *host, const char *path, uint16_t port) {
         return;
     }
     else if (compteur_pression == 1)
-        ESP_LOGI(TAG, "🔒 Mutex acquis. Début requêtes HTTP...");
+        //ESP_LOGI(TAG, "🔒 Mutex acquis. Début requêtes HTTP...");
 
     if (xSemaphoreTake(http_mutex, pdMS_TO_TICKS(500)) != pdTRUE) {
         ESP_LOGE(TAG, "❌ Mutex indisponible !");
@@ -519,13 +519,14 @@ void parse_json_data(const char *json) {
                     if (cJSON_IsString(battery) && battery->valuestring != NULL) {
                         battery_level = atoi(battery->valuestring);}
                     if (battery_level_old != battery_level) {
-                        ESP_LOGI("BATTERY", "%d/5", battery_level);}
+                        //ESP_LOGI("BATTERY", "%d/5", battery_level);
+                        }
                     battery_level_old = battery_level;
                     if (compteur_pression == 0 && battery_level >= 1 && battery_level <= 5) {
                         //ESP_LOGI("BATTERY", "🔋 Batterie : %d/5", battery_level);
                         int bips = 6 - battery_level;
                         for (int i = 0; i < bips; i++) {
-                            //Set_EXIO(TCA9554_EXIO8, true);   //bip de démarrage
+                            Set_EXIO(TCA9554_EXIO8, true);   //bip de démarrage
                             vTaskDelay(pdMS_TO_TICKS(1000));
                             Set_EXIO(TCA9554_EXIO8, false);
                             if (i < bips - 1) {
@@ -662,7 +663,7 @@ void save_data_to_sdcard(float temperature_max, float temperature_min) {
     if (temperature_min != 100.0f && temperature_max != -100.0f){
         fprintf(f, "%.2f,%.2f\n", temperature_max, temperature_min);
         fclose(f);
-        ESP_LOGI(TAG, "✅ Données écrites : %.2f°C, %.1f °C", temperature_max, temperature_min);
+        //ESP_LOGI(TAG, "✅ Données écrites : %.2f°C, %.1f °C", temperature_max, temperature_min);
     }
     
 }

@@ -203,7 +203,7 @@ void ui_modebaro_screen_init(void)
                                            _ui_theme_color_texte);
     ui_object_set_themeable_style_property(ui_Label22, LV_PART_MAIN | LV_STATE_DEFAULT, LV_STYLE_TEXT_OPA,
                                            _ui_theme_alpha_texte);
-    lv_obj_set_style_text_font(ui_Label22, &lv_font_montserrat_24, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_text_font(ui_Label22, &lv_font_montserrat_40, LV_PART_MAIN | LV_STATE_DEFAULT);
 
     lv_obj_add_event_cb(ui_modebaro, ui_event_modebaro, LV_EVENT_ALL, NULL);
 }

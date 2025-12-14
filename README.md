@@ -4,6 +4,8 @@ Ce projet est avant tout un **anémomètre** basé sur un **ESP32-S3**, conçu p
 Il mesure la **vitesse du vent** via un **anémomètre ultrasonique**, tout en pouvant afficher en option des données météo (pression, température).  
 L’interface est réalisée avec **LVGL** sur un écran tactile couleur Waveshare.
 
+![Anémomètre ESP32-S3 Bidibul](images/render.jpg)
+
 ---
 
 ## ⚙️ Fonctionnalités principales
